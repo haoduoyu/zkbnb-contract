@@ -71,8 +71,8 @@ contract ZkBNB is Events, Storage, Config, ReentrancyGuardUpgradeable, IERC721Re
   function performDesert(
     bytes32 _nftRoot,
     ExodusVerifier.ExitData calldata _exitData,
-    bytes32[15] calldata _assetMerkleProof,
-    bytes32[31] calldata _accountMerkleProof
+    bytes32[16] calldata _assetMerkleProof,
+    bytes32[32] calldata _accountMerkleProof
   ) external {
     /// All functions delegated to additional should NOT be nonReentrant
     delegateAdditional();
@@ -82,7 +82,7 @@ contract ZkBNB is Events, Storage, Config, ReentrancyGuardUpgradeable, IERC721Re
     uint _ownerAccountIndex,
     bytes32 _accountRoot,
     ExodusVerifier.ExitNftData[] memory _exitNfts,
-    bytes32[39][] memory _nftMerkleProofs
+    bytes32[40][] memory _nftMerkleProofs
   ) external {
     /// All functions delegated to additional should NOT be nonReentrant
     delegateAdditional();
@@ -107,14 +107,16 @@ contract ZkBNB is Events, Storage, Config, ReentrancyGuardUpgradeable, IERC721Re
       address _additionalZkBNB,
       address _znsController,
       address _znsResolver,
+      address _exodusVerifier,
       bytes32 _genesisStateRoot
-    ) = abi.decode(initializationParameters, (address, address, address, address, address, bytes32));
+    ) = abi.decode(initializationParameters, (address, address, address, address, address, address, bytes32));
 
     verifier = ZkBNBVerifier(_verifierAddress);
     governance = Governance(_governanceAddress);
     additionalZkBNB = AdditionalZkBNB(_additionalZkBNB);
     znsController = ZNSController(_znsController);
     znsResolver = PublicResolver(_znsResolver);
+    exodusVerifier = ExodusVerifier(_exodusVerifier);
 
     StoredBlockInfo memory zeroStoredBlockInfo = StoredBlockInfo(
       0,

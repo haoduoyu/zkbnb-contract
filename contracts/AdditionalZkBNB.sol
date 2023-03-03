@@ -41,8 +41,8 @@ contract AdditionalZkBNB is Storage, Config, Events {
     /* StoredBlockInfo memory _storedBlockInfo, */
     bytes32 _nftRoot,
     ExodusVerifier.ExitData calldata _exitData,
-    bytes32[15] calldata _assetMerkleProof,
-    bytes32[31] calldata _accountMerkleProof
+    bytes32[16] calldata _assetMerkleProof,
+    bytes32[32] calldata _accountMerkleProof
   ) external {
     require(_exitData.accountId <= MAX_ACCOUNT_INDEX, "e");
     require(_exitData.accountId != SPECIAL_ACCOUNT_ID, "v");
@@ -75,7 +75,7 @@ contract AdditionalZkBNB is Storage, Config, Events {
     uint _ownerAccountIndex,
     bytes32 _accountRoot,
     ExodusVerifier.ExitNftData[] memory _exitNfts,
-    bytes32[39][] memory _nftMerkleProofs
+    bytes32[40][] memory _nftMerkleProofs
   ) external {
     require(_ownerAccountIndex <= MAX_ACCOUNT_INDEX, "e");
     require(_ownerAccountIndex != SPECIAL_ACCOUNT_ID, "v");

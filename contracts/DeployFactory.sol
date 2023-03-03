@@ -24,6 +24,7 @@ contract DeployFactory {
     address listingToken;
     address zns;
     address priceOracle;
+    address exodusVerifier;
     UpgradeableMaster upgradeableMaster;
   }
 
@@ -72,7 +73,8 @@ contract DeployFactory {
       listingToken: addrs[7],
       zns: addrs[8],
       priceOracle: addrs[9],
-      upgradeableMaster: UpgradeableMaster(addrs[10])
+      exodusVerifier: addrs[10],
+      upgradeableMaster: UpgradeableMaster(addrs[11])
     });
     require(contracts.validator != address(0), "validator check");
     require(contracts.governor != address(0), "governor check");
@@ -119,6 +121,7 @@ contract DeployFactory {
         address(additionalZkBNB),
         address(znsController),
         address(znsResolver),
+        address(_contracts.exodusVerifier),
         _additionalParams.genesisAccountRoot
       )
     );

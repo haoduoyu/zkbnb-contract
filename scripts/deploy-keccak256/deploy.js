@@ -6,6 +6,8 @@ require('dotenv').config();
 const figlet = require('figlet');
 const chalk = require('chalk');
 
+const { poseidonContract } = require('circomlibjs');
+
 const { ethers } = hardhat;
 const { SECURITY_COUNCIL_MEMBERS_NUMBER_1, SECURITY_COUNCIL_MEMBERS_NUMBER_2, SECURITY_COUNCIL_MEMBERS_NUMBER_3 } =
   process.env;
@@ -56,7 +58,11 @@ async function main() {
   const upgradeableMaster = await contractFactories.UpgradeableMaster.deploy(...upgradeableMasterParams);
   await upgradeableMaster.deployed();
 
-  // Step 3: initialize deploy factory and finish deployment
+  // Step 3: deploy Poseidon contracts and ExodusVerifier
+  console.log(chalk.green('\t📦 ExodusVerifier...'));
+  const exodusVerifier = await deployDesertVerifier(owner);
+
+  // Step 4: initialize deploy factory and finish deployment
   // deploy price oracle
   console.log(chalk.green('\t📦 Deploy PriceOracleV1...'));
   const priceOracle = await contractFactories.ZNSPriceOracle.deploy(ethers.utils.parseEther('0.05'));
@@ -107,6 +113,7 @@ async function main() {
       _listingToken,
       znsRegistry.address,
       priceOracle.address,
+      exodusVerifier.address,
       upgradeableMaster.address,
     ],
     _genesisAccountRoot,
@@ -249,6 +256,26 @@ async function main() {
     DefaultNftFactory: [],
     upgradeableMaster: [upgradeableMaster.address, upgradeableMasterParams],
   });
+}
+
+async function deployDesertVerifier(owner) {
+  const PoseidonT3 = new ethers.ContractFactory(poseidonContract.generateABI(2), poseidonContract.createCode(2), owner);
+  const poseidonT3 = await PoseidonT3.deploy();
+  await poseidonT3.deployed();
+
+  const PoseidonT6 = new ethers.ContractFactory(poseidonContract.generateABI(5), poseidonContract.createCode(5), owner);
+  const poseidonT6 = await PoseidonT6.deploy();
+  await poseidonT6.deployed();
+
+  const PoseidonT7 = new ethers.ContractFactory(poseidonContract.generateABI(6), poseidonContract.createCode(6), owner);
+  const poseidonT7 = await PoseidonT7.deploy();
+  await poseidonT7.deployed();
+
+  const ExodusVerifier = await ethers.getContractFactory('ExodusVerifierTest');
+  const exodusVerifier = await ExodusVerifier.deploy(poseidonT3.address, poseidonT6.address, poseidonT7.address);
+  await exodusVerifier.deployed();
+
+  return exodusVerifier;
 }
 
 async function getContractFactories() {
