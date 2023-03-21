@@ -1,11 +1,9 @@
-const chai = require('chai');
-const { ethers } = require('hardhat');
-const { smock } = require('@defi-wonderland/smock');
-const assert = require('assert');
-const CID = require('cids');
-var request = require('sync-request');
+import { ethers } from 'hardhat';
+import chai, { expect } from 'chai';
+import { smock } from '@defi-wonderland/smock';
+import assert from 'assert';
+import CID = require('cids');
 
-const { expect } = chai;
 chai.use(smock.matchers);
 const abi = ethers.utils.defaultAbiCoder;
 
@@ -117,7 +115,6 @@ describe('NFT functionality', function () {
 
     it('should perform mint and then withdraw', async function () {
       withdrawOp = {
-        txType: 11, // WithdrawNft
         accountIndex: 1,
         creatorAccountIndex: 0,
         creatorTreasuryRate: 5,
@@ -165,13 +162,11 @@ describe('NFT functionality', function () {
 
     it('store pending withdrawn NFT on mint failure', async function () {
       withdrawOp2 = {
-        txType: 11, // WithdrawNft
         accountIndex: 1,
         creatorAccountIndex: 0,
         creatorTreasuryRate: 5,
         nftIndex,
         collectionId: 0,
-        gasFeeAccountIndex: 1,
         gasFeeAssetId: 0, //BNB
         gasFeeAssetAmount: 666,
         toAddress: acc2.address,
@@ -187,13 +182,11 @@ describe('NFT functionality', function () {
       const result = await zkBNB.getPendingWithdrawnNFT(nftIndex);
 
       assert.deepStrictEqual(withdrawOp2, {
-        txType: result['txType'],
         accountIndex: result['accountIndex'],
         creatorAccountIndex: result['creatorAccountIndex'],
         creatorTreasuryRate: result['creatorTreasuryRate'],
         nftIndex: result['nftIndex'],
         collectionId: result['collectionId'],
-        gasFeeAccountIndex: result['gasFeeAccountIndex'],
         gasFeeAssetId: result['gasFeeAssetId'],
         gasFeeAssetAmount: result['gasFeeAssetAmount'],
         toAddress: result['toAddress'],
@@ -254,7 +247,6 @@ describe('NFT functionality', function () {
 
     before(async () => {
       withdrawOp = {
-        txType: 11, // WithdrawNft
         accountIndex,
         creatorAccountIndex: 0,
         creatorTreasuryRate: 5,
@@ -321,7 +313,7 @@ describe('NFT functionality', function () {
 
     before(async () => {
       withdrawOp = {
-        txType: 11, // WithdrawNft
+        // WithdrawNft
         accountIndex,
         creatorAccountIndex: 0,
         creatorTreasuryRate: 5,
@@ -342,7 +334,7 @@ describe('NFT functionality', function () {
     });
 
     it('should be able to request full exit Nft', async function () {
-      await zkBNB.connect(acc1).requestFullExitNft(accountIndex, acc1.address, nftIndex, 0);
+      await zkBNB.connect(acc1).requestFullExitNft(accountIndex, nftIndex);
     });
 
     it('check pubdata of full exit request', async function () {
@@ -360,8 +352,8 @@ describe('NFT functionality', function () {
           0, // creator treasury rate
           nftIndex,
           0, // collection id
-          acc1.address, // account name hash
-          acc1.address, // creator name hash
+          acc1.address, // owner address
+          ethers.constants.AddressZero, // creator address
           ethers.utils.hexZeroPad('0x0'.toLowerCase(), 32), // nft content hash
           0,
         ],
