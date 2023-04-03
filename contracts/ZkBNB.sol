@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "./interfaces/INFTFactory.sol";
 import "./Config.sol";
 import "./Storage.sol";
+import "./DesertVerifier.sol";
 
 /// @title ZkBNB main contract
 /// @author ZkBNB Team
@@ -51,6 +52,58 @@ contract ZkBNB is Events, Storage, Config, ReentrancyGuardUpgradeable, IERC721Re
     return this.onERC721Received.selector;
   }
 
+  /// @notice Checks if Desert mode must be entered. If true - enters desert mode and emits DesertMode event.
+  /// @dev Desert mode must be entered in case of current ethereum block number is higher than the oldest
+  /// @dev of existed priority requests expiration block number.
+  /// @return bool flag that is true if the desert mode must be entered.
+  function activateDesertMode() public returns (bool) {
+    // #if EASY_DESERT
+    bool trigger = true;
+    // #else
+    trigger =
+      block.number >= priorityRequests[firstPriorityRequestId].expirationBlock &&
+      priorityRequests[firstPriorityRequestId].expirationBlock != 0;
+    // #endif
+    if (trigger) {
+      if (!desertMode) {
+        desertMode = true;
+        emit DesertMode();
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  function performDesert(
+    StoredBlockInfo memory _storedBlockInfo,
+    uint256 _nftRoot,
+    DesertVerifier.AssetExitData calldata _assetExitData,
+    DesertVerifier.AccountExitData calldata _accountExitData,
+    uint256[16] calldata _assetMerkleProof,
+    uint256[32] calldata _accountMerkleProof
+  ) external {
+    /// All functions delegated to additional should NOT be nonReentrant
+    delegateAdditional();
+  }
+
+  function performDesertNft(
+    StoredBlockInfo memory _storedBlockInfo,
+    uint256 _assetRoot,
+    DesertVerifier.AccountExitData calldata _accountExitData,
+    DesertVerifier.NftExitData[] memory _exitNfts,
+    uint256[32] calldata _accountMerkleProof,
+    uint256[40][] memory _nftMerkleProofs
+  ) external {
+    /// All functions delegated to additional should NOT be nonReentrant
+    delegateAdditional();
+  }
+
+  function cancelOutstandingDepositsForDesertMode(uint64 _n, bytes[] memory _depositsPubData) external {
+    /// All functions delegated to additional should NOT be nonReentrant
+    delegateAdditional();
+  }
+
   /// @notice ZkBNB contract initialization. Can be external because Proxy contract intercepts illegal calls of this function.
   /// @param initializationParameters Encoded representation of initialization parameters:
   /// @dev _governanceAddress The address of Governance contract
@@ -59,12 +112,18 @@ contract ZkBNB is Events, Storage, Config, ReentrancyGuardUpgradeable, IERC721Re
   function initialize(bytes calldata initializationParameters) external initializer {
     __ReentrancyGuard_init();
 
-    (address _governanceAddress, address _verifierAddress, address _additionalZkBNB, bytes32 _genesisStateRoot) = abi
-      .decode(initializationParameters, (address, address, address, bytes32));
+    (
+      address _governanceAddress,
+      address _verifierAddress,
+      address _additionalZkBNB,
+      address _desertVerifier,
+      bytes32 _genesisStateRoot
+    ) = abi.decode(initializationParameters, (address, address, address, address, bytes32));
 
     verifier = ZkBNBVerifier(_verifierAddress);
     governance = Governance(_governanceAddress);
     additionalZkBNB = AdditionalZkBNB(_additionalZkBNB);
+    desertVerifier = DesertVerifier(_desertVerifier);
 
     StoredBlockInfo memory zeroStoredBlockInfo = StoredBlockInfo(
       0,
@@ -464,29 +523,6 @@ contract ZkBNB is Events, Storage, Config, ReentrancyGuardUpgradeable, IERC721Re
     delegateAdditional();
   }
 
-  /// @notice Checks if Desert mode must be entered. If true - enters exodus mode and emits ExodusMode event.
-  /// @dev Desert mode must be entered in case of current ethereum block number is higher than the oldest
-  /// @dev of existed priority requests expiration block number.
-  /// @return bool flag that is true if the Exodus mode must be entered.
-  function activateDesertMode() public returns (bool) {
-    // #if EASY_DESERT
-    bool trigger = true;
-    // #else
-    trigger =
-      block.number >= priorityRequests[firstPriorityRequestId].expirationBlock &&
-      priorityRequests[firstPriorityRequestId].expirationBlock != 0;
-    // #endif
-    if (trigger) {
-      if (!desertMode) {
-        desertMode = true;
-        emit DesertMode();
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
   /// @notice Get pending balance that the user can withdraw
   /// @param _address The layer-1 address
   /// @param _assetAddr Token address
@@ -510,7 +546,6 @@ contract ZkBNB is Events, Storage, Config, ReentrancyGuardUpgradeable, IERC721Re
       alreadyMintedFlag = true;
     }
     // get layer-1 address by account name hash
-    bytes memory _emptyExtraData;
     if (alreadyMintedFlag) {
       /// This is a NFT from layer 1, withdraw id directly
       try
@@ -527,11 +562,9 @@ contract ZkBNB is Events, Storage, Config, ReentrancyGuardUpgradeable, IERC721Re
     } else {
       try
         INFTFactory(_factoryAddress).mintFromZkBNB(
-          op.creatorAddress,
           op.toAddress,
           op.nftIndex,
-          governance.getNftTokenURI(op.nftContentType, op.nftContentHash),
-          _emptyExtraData
+          governance.getNftTokenURI(op.nftContentType, op.nftContentHash)
         )
       {
         // register default collection factory

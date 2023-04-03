@@ -11,6 +11,7 @@ describe('NFT functionality', function () {
   let governance;
   let mockZkBNBVerifier;
   let mockNftFactory;
+  let mockDesertVerifier;
 
   let zkBNB; // ZkBNBTest.sol
   let additionalZkBNB; // AdditionalZkBNB.sol
@@ -46,6 +47,8 @@ describe('NFT functionality', function () {
     additionalZkBNB = await AdditionalZkBNB.deploy();
     await additionalZkBNB.deployed();
 
+    mockDesertVerifier = await smock.fake('DesertVerifier');
+
     const ZkBNBTest = await ethers.getContractFactory('ZkBNBTest', {
       libraries: {
         Utils: utils.address,
@@ -55,11 +58,12 @@ describe('NFT functionality', function () {
     await zkBNB.deployed();
 
     const initParams = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'address', 'address', 'bytes32'],
+      ['address', 'address', 'address', 'address', 'bytes32'],
       [
         governance.address,
         mockZkBNBVerifier.address,
         additionalZkBNB.address,
+        mockDesertVerifier.address,
         ethers.utils.formatBytes32String('genesisStateRoot'),
       ],
     );
@@ -373,24 +377,15 @@ describe('NFT functionality', function () {
 
     it('mint from ZkBNB using a IPFS CID Hash', async function () {
       const tokenURI = await governance.getNftTokenURI(0, IPFSMultiHashDigest);
-      const extraData = ethers.constants.HashZero;
+      // const extraData = ethers.constants.HashZero;
 
-      expect(
-        zkBNBNFTFactory.mintFromZkBNB(acc1.address, acc2.address, tokenId, tokenURI, extraData),
-      ).to.be.revertedWith('only zkbnbAddress');
-      await expect(
-        await zkBNB.mintNFT(
-          zkBNBNFTFactory.address,
-          acc1.address,
-          acc2.address,
-          tokenId,
-          tokenURI,
-          ethers.constants.HashZero,
-        ),
-      )
-        .to.emit(zkBNBNFTFactory, 'MintNFTFromZkBNB')
-        .withArgs(acc1.address, acc2.address, tokenId, extraData);
+      expect(zkBNBNFTFactory.mintFromZkBNB(acc2.address, tokenId, tokenURI)).to.be.revertedWith('only zkbnbAddress');
+      await expect(await zkBNB.mintNFT(zkBNBNFTFactory.address, acc2.address, tokenId, tokenURI));
+      // remove emit event of MintNFTFromZkBNB
+      // .to.emit(zkBNBNFTFactory, 'MintNFTFromZkBNB')
+      // .withArgs(acc1.address, acc2.address, tokenId, extraData);
       assert.strictEqual(await zkBNBNFTFactory.tokenURI(tokenId), tokenURI);
+      assert.strictEqual(await zkBNBNFTFactory.ownerOf(tokenId), acc2.address);
     });
 
     // // delete contentHash map
